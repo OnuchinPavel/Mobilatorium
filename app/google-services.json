@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "356285518274",
+    "firebase_url": "https://mobilatorium.firebaseio.com",
+    "project_id": "mobilatorium",
+    "storage_bucket": "mobilatorium.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:356285518274:android:8999e30fc50ff59d",
+        "android_client_info": {
+          "package_name": "com.example.onuchinx.mobilatorium"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "356285518274-46ets92r5l13lsagafavnf8ui1lo50fh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtZh2LJWdPkGXND6yPgOCFiY-c5Q3Ylvo"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

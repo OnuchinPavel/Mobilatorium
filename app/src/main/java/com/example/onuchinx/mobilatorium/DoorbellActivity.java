@@ -16,6 +16,7 @@ import com.google.android.things.pio.PeripheralManagerService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import timber.log.Timber;
 
@@ -29,13 +30,15 @@ public class DoorbellActivity extends Activity {
     private Button button;
 
     private DoorbellCamera doorbellCamera;
-    ImageView imageView;
 
     private Handler backgroundIoHandler;
     private HandlerThread backgroundTaskHandlerThread;
 
     private Handler cloudVisionHandler;
     private HandlerThread cloudVisionHandlerThread;
+    public  ImageView imageView;
+
+    private FirebaseEventService firebaseEventService;
 
     // Callback to receive captured camera image data
     private ImageReader.OnImageAvailableListener onImageAvailableListener =
@@ -57,8 +60,7 @@ public class DoorbellActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        imageView=(ImageView)findViewById(R.id.imageView);
-
+imageView = (ImageView)findViewById(R.id.imageView);
         Timber.plant(new Timber.DebugTree());
 
         PeripheralManagerService service = new PeripheralManagerService();
@@ -91,6 +93,8 @@ public class DoorbellActivity extends Activity {
 
         startBackgroundThread();
         startCloudVisionThread();
+
+        firebaseEventService = new FirebaseEventService();
     }
 
     @Override
@@ -120,8 +124,7 @@ public class DoorbellActivity extends Activity {
         if (imageBytes != null) {
             // ...process the captured image...
             Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
-            imageView.setImageBitmap(bitmap);
-
+imageView.setImageBitmap(bitmap);
             // Compress to JPEG
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
@@ -132,7 +135,9 @@ public class DoorbellActivity extends Activity {
                 public void run() {
                     try {
                         Timber.d("Sending image to cloud vision.");
-                        CloudVisionUtils.annotateImage(imageBytesCompressed);
+                        Map<String, Float> annotations = CloudVisionUtils
+                                .annotateImage(imageBytesCompressed);
+                        firebaseEventService.pushEvent(imageBytesCompressed, annotations);
                     } catch (IOException e) {
                         Timber.e(e, "Exception while annotating image: ");
                     }
@@ -140,6 +145,5 @@ public class DoorbellActivity extends Activity {
             });
         }
     }
-
 
 }
