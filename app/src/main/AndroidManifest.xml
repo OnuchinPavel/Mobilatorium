@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.onuchinx.mobilatorium">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
+
 
     <application
         android:allowBackup="true"
@@ -11,20 +15,19 @@
         android:theme="@style/AppTheme">
         <uses-library android:name="com.google.android.things"/>
 
-        <activity android:name=".MainActivity">
+        <activity android:name=".DoorbellActivity">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <intent-filter>
-            <action android:name="android.intent.action.MAIN"/>
-
-            <category android:name="android.intent.category.IOT_LAUNCHER"/>
-            <category android:name="android.intent.category.DEFAULT"/>
-        </intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.IOT_LAUNCHER"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
 
         </activity>
+
     </application>
 
 </manifest>
