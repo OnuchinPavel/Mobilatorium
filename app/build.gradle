@@ -21,15 +21,18 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
-        exclude group: 'com.android.support', module: 'support-annotations'
-    })
+
     compile 'com.android.support:appcompat-v7:25.3.0'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+    compile 'com.jakewharton.timber:timber:4.5.1'
     provided 'com.google.android.things:androidthings:0.2-devpreview'
     compile 'com.google.android.things.contrib:driver-button:0.2'
-    compile 'com.jakewharton.timber:timber:4.5.1'
+
+    compile 'com.google.api-client:google-api-client-android:1.22.0' exclude module: 'httpclient'
+    compile 'com.google.http-client:google-http-client-gson:1.22.0' exclude module: 'httpclient'
+
+    compile 'com.google.apis:google-api-services-vision:v1-rev22-1.22.0'
 
 
-    testCompile 'junit:junit:4.12'
+
+
 }

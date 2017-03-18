@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import com.google.android.things.contrib.driver.button.Button;
 import com.google.android.things.pio.PeripheralManagerService;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -23,72 +24,21 @@ import timber.log.Timber;
  */
 
 public class DoorbellActivity extends Activity {
-    private Handler backgroundHandler;
-    private HandlerThread backgroundThread;
-    private DoorbellCamera camera;
     private static final String GPIO_PIN_BUTTON_NAME = "BCM21";
-    ImageView imageView;
 
     private Button button;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    private DoorbellCamera doorbellCamera;
+    ImageView imageView;
 
-        imageView = (ImageView)findViewById(R.id.imageView);
+    private Handler backgroundIoHandler;
+    private HandlerThread backgroundTaskHandlerThread;
 
-        startBackgroundThread();
-        camera = DoorbellCamera.getInstance();
-        camera.initializeCamera(this, backgroundHandler, mOnImageAvailableListener);
+    private Handler cloudVisionHandler;
+    private HandlerThread cloudVisionHandlerThread;
 
-
-        Timber.plant(new Timber.DebugTree());
-
-        PeripheralManagerService service = new PeripheralManagerService();
-        Timber.d("Available GPIO: " + service.getGpioList());
-
-        try {
-            button = new Button(
-                    GPIO_PIN_BUTTON_NAME,
-                    Button.LogicState.PRESSED_WHEN_LOW);
-            button.setOnButtonEventListener(new Button.OnButtonEventListener() {
-                @Override
-                public void onButtonEvent(Button button, boolean pressed) {
-                    String pressedString = pressed ? "pressed" : "unpressed";
-                    Timber.d(GPIO_PIN_BUTTON_NAME + ": " + pressedString);
-
-                }
-            });
-        } catch (IOException e) {
-            Timber.e(e);
-        }
-
-    }
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        try {
-            button.close();
-        } catch (IOException e) {
-            Timber.e(e, "Error while close " + GPIO_PIN_BUTTON_NAME + "button");
-        }
-
-        backgroundThread.quitSafely();
-        camera.shutDown();
-
-    }
-    private Button.OnButtonEventListener mButtonCallback =
-            new Button.OnButtonEventListener() {
-                @Override
-                public void onButtonEvent(Button button, boolean pressed) {
-                    if (pressed) {
-                        // Doorbell rang!
-                        camera.takePicture();
-                    }
-                }
-            };
-
-    private ImageReader.OnImageAvailableListener mOnImageAvailableListener =
+    // Callback to receive captured camera image data
+    private ImageReader.OnImageAvailableListener onImageAvailableListener =
             new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
@@ -103,17 +53,93 @@ public class DoorbellActivity extends Activity {
                 }
             };
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        imageView=(ImageView)findViewById(R.id.imageView);
+
+        Timber.plant(new Timber.DebugTree());
+
+        PeripheralManagerService service = new PeripheralManagerService();
+        Timber.d("Available GPIO: " + service.getGpioList());
+
+        try {
+            // Init button
+            button = new Button(
+                    GPIO_PIN_BUTTON_NAME,
+                    Button.LogicState.PRESSED_WHEN_LOW);
+            button.setOnButtonEventListener(new Button.OnButtonEventListener() {
+                @Override
+                public void onButtonEvent(Button button, boolean pressed) {
+                    if (pressed) {
+                        Timber.d(GPIO_PIN_BUTTON_NAME + ": pressed. Take a picture.");
+                        doorbellCamera.takePicture();
+                    } else {
+                        Timber.d(GPIO_PIN_BUTTON_NAME + ": unpressed");
+                    }
+                }
+            });
+
+            // Init camera
+            doorbellCamera = DoorbellCamera.getInstance();
+            doorbellCamera.initializeCamera(this, backgroundIoHandler, onImageAvailableListener);
+
+        } catch (IOException e) {
+            Timber.e(e);
+        }
+
+        startBackgroundThread();
+        startCloudVisionThread();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        try {
+            button.close();
+        } catch (IOException e) {
+            Timber.e(e, "Error while close " + GPIO_PIN_BUTTON_NAME + "button");
+        }
+    }
+
+    private void startBackgroundThread() {
+        backgroundTaskHandlerThread = new HandlerThread("InputThread");
+        backgroundTaskHandlerThread.start();
+        backgroundIoHandler = new Handler(backgroundTaskHandlerThread.getLooper());
+    }
+
+    private void startCloudVisionThread() {
+        cloudVisionHandlerThread = new HandlerThread("CloudThread");
+        cloudVisionHandlerThread.start();
+        cloudVisionHandler = new Handler(cloudVisionHandlerThread.getLooper());
+    }
+
     private void onPictureTaken(byte[] imageBytes) {
         if (imageBytes != null) {
             // ...process the captured image...
             Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
             imageView.setImageBitmap(bitmap);
+
+            // Compress to JPEG
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
+            final byte[] imageBytesCompressed = byteArrayOutputStream.toByteArray();
+
+            cloudVisionHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Timber.d("Sending image to cloud vision.");
+                        CloudVisionUtils.annotateImage(imageBytesCompressed);
+                    } catch (IOException e) {
+                        Timber.e(e, "Exception while annotating image: ");
+                    }
+                }
+            });
         }
     }
 
-    private void startBackgroundThread() {
-        backgroundThread = new HandlerThread("InputThread");
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
-    }
+
 }
